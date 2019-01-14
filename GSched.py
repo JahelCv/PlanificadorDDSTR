@@ -3,7 +3,6 @@ import sys
 import os
 from heapq import heappush, heappop
 
-import Partitions
 import Tasks
 import Utils
 import Tracer
@@ -13,7 +12,7 @@ readyQueue = []   # this is a heap
 releaseQueue = []
 blockedTasks = [] # this is a list
 
-policies = ["RM", "EDF", "EDFNP"]
+policies = ["RM", "DM", "EDF", "EDFNP"]
 
 tasksIds = []
 tasks = {}
@@ -44,6 +43,10 @@ def scheAddPartition(pid):
     for i in range(len(tsks)):
         tasksIds.append(tsks[i])
 
+def scheAddTask(taskId):
+    global tasksIds
+    tasksIds.append(taskId)
+
 def nTaskActivation(tid):
 	if (nTaskActiv.has_key(tid)):
 	    nTaskActiv[tid] = nTaskActiv[tid] + 1
@@ -60,7 +63,7 @@ def initializeSched():
     tList = []
     utotal = 0.0
     for i in range(len(tasksIds)):
-        (tper, tdead, twcet, tutil) = Tasks.taskGetParams(tasksIds[i])
+        (tid, tper, tdead, twcet, tutil) = Tasks.taskGetParams(tasksIds[i])
         utotal +=  float(twcet) / float(tper)
         elem = (tasksIds[i], tper, tdead, twcet)
         tList.append(elem)
@@ -78,10 +81,8 @@ def initializeSched():
         absDead = relDead
 
         while (releaseAt <= hyper):
-            if (schedAlg == "RM"):
-                prio = i + 1
-            else:
-                prio = absDead
+            prio = i + 1    #asigna la prioridad de la tarea en funcion de la ordenacio
+            
             heappush(releaseQueue, ((releaseAt, prio), (tid, period, relDead, absDead, wcet, 0, nActiv)))
             releaseAt = releaseAt + period
             absDead = releaseAt + relDead
@@ -169,23 +170,17 @@ def schedRun(ticks):
         #add tasks in blocked to ready if release time
         updated = fillRQueue(clock)
         
-        if (schedAlg == "EDFNP"):
-            while ((selectIdleCPU() >= 0) and (len(readyQueue) > 0)):
-                ncore = selectIdleCPU()
+        while (len(readyQueue) > 0):
+            prio = readyQueue[0][0]
+            ncore = selectCPU(prio)
+            if (ncore >= 0):
                 ((prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
                 prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
-        else:
-            while (len(readyQueue) > 0):
-                prio = readyQueue[0][0]
-                ncore = selectCPU(prio)
-                if (ncore >= 0):
-                    ((prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
-                    prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
-                    (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
-                    if (pcTaskId != "Idle"):
-                        heappush(readyQueue, ((prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
-                else:
-                    break
+                (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
+                if (pcTaskId != "Idle"):
+                    heappush(readyQueue, ((prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
+            else:
+                break
 
         
 # Loof for next significant next event

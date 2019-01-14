@@ -70,27 +70,33 @@ def main (argv):
     if (sched != None):
         psched = sched
 
-    nPartsMin = 4
-    nPartsMax = 8
-    nTaskMin = 3
-    nTaskMax = 6
 
-    System.generateSystem(mCores, nPartsMin, nPartsMax, globalUtil, nTaskMin, nTaskMax)
+    nTaskMin = 4
+    nTaskMax = 12
 
-    plist = System.allPartList()
-    print plist
+    ##System.generateSystem(mCores, nPartsMin, nPartsMax, globalUtil, nTaskMin, nTaskMax)
 
-    BinPacking.initBin("WF", mCores)
-    for (pid, util) in (plist):
+    System.generateSystem(mCores, globalUtil, nTaskMin, nTaskMax)
+    #System.showSystem()
+
+    tslist = System.allTaskList()
+    print "Lista de tareas", tslist
+
+    tList = []
+    for ts in (tslist):
+        elm = (ts[0],ts[4])
+        tList.append(elm)
+    print "Lista de tareas y utilizaciones", tList
+
+    BinPacking.initBin(psched, mCores)
+    for (pid, util) in (tList):
         ok = BinPacking.binAdd(pid, util)
         if (not ok):
             print "Fallo la particion no cabe", pid, util
             break
 
-    for i in range(mCores):
-        print BinPacking.binGetbyIndex(i)
     BinPacking.show()
-    print BinPacking.binDiscrepancy()
+    print "Discrepancia: " , BinPacking.binDiscrepancy()
 
         
 main (sys.argv)

@@ -14,6 +14,7 @@ fout = "chronogram.svg"
 xmax = 0
 ymax = 0
 lines = 0
+monocore = None
 labels = []
 taskIds = {}
 
@@ -48,16 +49,17 @@ root = None
 
     
 def chronoInit(nlines, width, fname):
-    global xmax, ymax, lines, dwg
+    global xmax, ymax, lines, monocore, dwg
     global root
 
+    monocore = (nlines == 1)
     lines = nlines
     xmax = width * fct
     ymax = lines * separation 
     fout = fname+".svg"
 
     root=Tk()
-    dwg = Canvas(root, width=xmax+offset, height=2*ymax+offset)
+    dwg = Canvas(root, width=xmax+offset, height=4*ymax+offset)
     root.wm_title("Cronograma")
     dwg.pack()
 
@@ -97,18 +99,22 @@ def chronoAddLine(nline, tag):
 
 def chronoAddExec(nline, start, end, task):
     global dwg, tNum
+    ntask = int(task[1:])
     if (taskIds.has_key(task)):
         ntsk = taskIds[task]
     else:
         taskIds[task] = tNum % len(palette)
         ntsk = tNum
         tNum += 1
+
     lpos = nline + 1
  #   dwg.add(dwg.rect((start + offset, (lpos * separation)-heigth), size=(end-start, heigth), fill=palette[ntsk]))
     x0 = (fct*start) + offset
-    y0 = (lpos * separation) - heigth
+    y0 = (lpos * separation) - heigth 
+    if (monocore):
+        y0 = y0 + (ntask * heigth)
     x1 = offset + (fct*end)
-    y1 = y0 + heigth
+    y1 = y0 + heigth 
     dwg.create_rectangle(x0, y0, x1, y1, fill=palette[ntsk])
 
 

@@ -5,8 +5,16 @@ import os
 import random
 import getopt
 
+from heapq import heappush, heappop
+
 import System
 import Analysis
+
+import chronogram
+import Cores
+import Tasks
+import GSched
+
 
 def usage ():
     print "Usage: \nprovaGSched-random [-help] [-verbose] [-seed value] [-cores value]"
@@ -87,5 +95,29 @@ def main (argv):
 
     wcrt = Analysis.schedulabilityTest(psched, 1, tlist)
     print "Tiempo de respuesta: ", wcrt
-        
+
+
+    GSched.schedInit(mCores, psched)
+
+    for tid in (Tasks.allTaskIds()):
+        GSched.scheAddTask(tid)
+
+    print "Tasks: "
+    GSched.showTasks()
+    GSched.schedRun(100)
+    
+    hyper = GSched.schedHyperperiod()
+    
+    chronogram.chronoInit(mCores, hyper, "chrono")
+    
+    for i in range(mCores):
+        chronogram.chronoAddLine(i, "C"+str(i))
+    
+    for c in range(mCores):
+        chrono = GSched.schedChrono(c)
+        for e in range(len(chrono)):
+            (tsk, start, end) = chrono[e]
+            chronogram.chronoAddExec(c, start, end, tsk)
+    chronogram.chronoClose()
+
 main (sys.argv)

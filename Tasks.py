@@ -31,7 +31,13 @@ def taskParams(tid, per, dead, wcet, util):
 def taskGetParams(tid):
     return taskDict[tid].taskGetParams()
 
-def allTasks():
+def allTaskParams():
+    ret = []
+    for tid in allTaskIds():
+        ret.append(taskGetParams(tid))
+    return ret
+
+def allTaskIds():
     return taskDict.keys()
 
 def taskPeriod(tid):

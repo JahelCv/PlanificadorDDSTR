@@ -32,7 +32,7 @@ class Task:
 
 #Observadora
     def taskGetParams(self):
-        return (self.period, self.deadLine, self.wcet, self.util)
+        return (self.tid, self.period, self.deadLine, self.wcet, self.util)
 
     def taskId(self):
         return self.tid

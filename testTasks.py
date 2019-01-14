@@ -4,13 +4,21 @@ import sys
 import os
 
 import Tasks
+import Analysis
 
 #-------------------------#
 #          MAIN           #
 #-------------------------#
 def main (argv):
 
-    for i in range(10):
+    print "Test Task"
+    if (len(argv) > 1):
+        ntareas = int(argv[1])
+    else:
+        ntareas = 10
+
+
+    for i in range(ntareas):
         partId = "P0"
         tid = "T"+str(i)
         util = 0.8 + i*0.1
@@ -21,10 +29,15 @@ def main (argv):
         if (ok):
             Tasks.taskParams(tid, per, dead, wcet, util)
         else:
-            print (partId, " Exists")
+            print partId, " Exists"
 
-    alltsk = Tasks.allTasks()
-    for tid in (alltsk):
-        print (Tasks.taskShow(tid))
+    alltskId = Tasks.allTaskIds()
+    for tid in (alltskId):
+        print Tasks.taskShow(tid)
+
+    alltsk = Tasks.allTaskParams()
+    for tsk in (alltsk):
+        print tsk
+    
         
 main (sys.argv)

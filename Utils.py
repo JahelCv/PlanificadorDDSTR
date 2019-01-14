@@ -1,7 +1,7 @@
 ##Module: Tracer
 import random
 
-periods = [20 ,25 ,40 ,50 ,100 ,125 ,200 ,250 ,500 ,1000]
+periods = [10, 20 ,25 ,40 ,50 ,60, 75, 100 ,125 , 150, 300 ,250 ,500 ,1000]
 
 def adjust(v, nd):
 	return float(float(round(v * 10**nd)) / 10**nd)
