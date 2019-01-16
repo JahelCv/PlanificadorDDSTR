@@ -9,8 +9,8 @@ import Tracer
 from CPU import CPU
 
 readyQueue = []   # this is a heap
-releaseQueue = []
-blockedTasks = [] # this is a list
+releaseQueue = [] # this is a heap
+#blockedTasks = [] # this is a list
 
 policies = ["RM", "DM", "EDF", "EDFNP"]
 
@@ -71,7 +71,7 @@ def initializeSched():
     
     hyper = Utils.HyperPeriod(tperiods)
     
-    if ((schedAlg == "RM") or (schedAlg == "DM")):
+    if ((schedAlg == "RM") or (schedAlg == "DM") or (schedAlg == "EDF")):
         tList = sorted(tList, key=lambda elm: elm[2])
     
     for i in range(len(tList)):
@@ -104,7 +104,12 @@ def fillRQueue(clock):
         while (clock  == releaseAt):
             (tid, period, relDead, absDead, wcet, texec, nActiv) = releaseQueue[0][1]
             t = heappop(releaseQueue)
-            heappush(readyQueue, ((prio), (tid, period, relDead, absDead, wcet, 0, nActiv + 1)))
+
+            if ((schedAlg == "RM") or (schedAlg == "DM")):
+                heappush(readyQueue, ((prio), (tid, period, relDead, absDead, wcet, 0, nActiv + 1)))
+            elif (schedAlg == "EDF"):
+                heappush(readyQueue, ((absDead, prio), (tid, period, relDead, absDead, wcet, 0, nActiv + 1)))
+
             updated = True
             nitems -= 1
             if (nitems > 0):
@@ -162,7 +167,7 @@ def schedRun(ticks):
 
     clock = 0
     niter = 0
-    verbose = False
+    verbose = True
     
     if (verbose): print "******** Clock: ", clock, "***************"
 
@@ -170,20 +175,49 @@ def schedRun(ticks):
         #add tasks in blocked to ready if release time
         updated = fillRQueue(clock)
         
-        while (len(readyQueue) > 0):
-            prio = readyQueue[0][0]
-            ncore = selectCPU(prio)
-            if (ncore >= 0):
-                ((prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
-                prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
-                (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
-                if (pcTaskId != "Idle"):
-                    heappush(readyQueue, ((prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
-            else:
-                break
+        if ((schedAlg == "RM") or (schedAlg == "DM")):
+            while (len(readyQueue) > 0):
+                prio = readyQueue[0][0]
+                ncore = selectCPU(prio)
+                if (ncore >= 0):
+                    ((prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                    prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
+                    (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
+                    if (pcTaskId != "Idle"):
+                        heappush(readyQueue, ((prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
+                else:
+                    break
 
-        
-# Loof for next significant next event
+        elif (schedAlg == "EDF"):
+
+            while (len(readyQueue) > 0):
+                (absDeadEDF, prioEDF) = readyQueue[0][0]
+
+                for ncore in range(mCores):
+                    if (ncore >= 0):
+                        if(cpu[ncore].cpuIsIdle):
+                            # Insertar task tranquilament!
+                            ((absDeadEDF, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                            cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
+                        else:
+                            # Vol dir que tenim una task a la CPU
+                            # Cal escollir entre la task de la CPU o la del HEAP
+                            (CPUid, CPUtaskId, CPUtaskPrio, CPUtaskPeriod, CPUtaskRelDead, CPUtaskAbsDead, CPUtaskWCET, CPUtaskTexec, CPUtaskNjob) = cpu[ncore].cpuInfo()
+                            if (absDeadEDF < CPUtaskAbsDead) or ((absDeadEDF == CPUtaskAbsDead) and (prioEDF < CPUtaskPrio)):
+                                # Expulsamos la tarea e introducimos la del HEAP
+                                ((absDeadEDF, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                                prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
+                                (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
+                                #if (pcTaskId != "Idle"):
+                                heappush(readyQueue, ((pabsDead, prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
+                            else:
+                                # No expulsamos la tarea
+                                break
+                    else:
+                        print "No selecciona la cpu"
+                        break
+                
+        # Loof for next significant next event
         if (len(releaseQueue) > 0):
             nxtRelease = releaseQueue[0][0][0]
         else:
