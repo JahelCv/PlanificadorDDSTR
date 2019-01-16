@@ -101,14 +101,20 @@ def fillRQueue(clock):
     updated = False
     nitems = len(releaseQueue)
     if ( nitems > 0):
+        # print " #### NITEMS:", nitems, ", CLOCK:",clock,", PUSHED TO READYQUEUE: ####" 
         (releaseAt, prio) = releaseQueue[0][0]
-        while (clock  <= releaseAt):
-            (tid, period, relDead, absDead, wcet, texec, nActiv) = releaseQueue[0][1]
-            t = heappop(releaseQueue)
+        #print "Primer element - ReleaseAt: ", releaseAt, " - Prio: ", prio
+        # ESTA MAL!!! -> while (clock  <= releaseAt):
+        while (releaseAt  <= clock):
+            #(tid, period, relDead, absDead, wcet, texec, nActiv) = releaseQueue[0][1]
+            ((releaseAt,prio),(tid, period, relDead, absDead, wcet, texec, nActiv)) = heappop(releaseQueue)
+            #t = heappop(releaseQueue)
+            # print "~~ HEAPPOP: ((",releaseAt,prio,"),(",tid, period, relDead, absDead, wcet, texec, nActiv,"))"
 
             if ((schedAlg == "RM") or (schedAlg == "DM")):
                 heappush(readyQueue, ((prio), (tid, period, relDead, absDead, wcet, 0, nActiv + 1)))
             elif (schedAlg == "EDF"):
+                # print "~~ INGRESAMOS ASI -> ((",absDead, prio,"), (",tid, period, relDead, absDead, wcet, 0, nActiv + 1,"))"
                 heappush(readyQueue, ((absDead, prio), (tid, period, relDead, absDead, wcet, 0, nActiv + 1)))
 
             updated = True
@@ -117,6 +123,7 @@ def fillRQueue(clock):
                (releaseAt, prio) = releaseQueue[0][0]
             else:
                 releaseAt = clock + INFINITE
+    # print "#### FIN FILL READY QUEUE ####"
     return updated
 
 
@@ -163,7 +170,7 @@ def schedRun(ticks):
 
     clock = 0
     niter = 0
-    verbose = False
+    verbose = True
 
     cTaskId = []
     pTaskId = []
@@ -173,30 +180,14 @@ def schedRun(ticks):
     if (verbose): print "******** Clock: ", clock, "***************"
 
     while (True):
-
-        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" 
-        print "RealeaseQueue" 
-        for i in range(len(releaseQueue)):     
-            print releaseQueue[i]
-        print "ReadyQueue" 
-        for i in range(len(readyQueue)):     
-            print readyQueue[i]
-        raw_input('Press enter to continue: ')
-        print "--------------------------------------------------------------" 
-
-        #add tasks in blocked to ready if release time
+        # add tasks in blocked to ready if release time
         updated = fillRQueue(clock)
-
-        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" 
-        print "RealeaseQueue" 
-        for i in range(len(releaseQueue)):     
-            print releaseQueue[i]
-        print "ReadyQueue" 
+        
+        print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
         for i in range(len(readyQueue)):     
             print readyQueue[i]
-        raw_input('Press enter to continue: ')
-        print "--------------------------------------------------------------" 
-
+        # DESCOMENTAR raw_input('#### Press enter to continue: ####')
+        # print "--------------------------------------------------------------"  
         
         if ((schedAlg == "RM") or (schedAlg == "DM")):
             while (len(readyQueue) > 0):
@@ -212,38 +203,41 @@ def schedRun(ticks):
                     break
 
         elif (schedAlg == "EDF"):
+            # print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
+            # Quito porque ES EXPULSIVO y se comprueba a cada clock -> while (len(readyQueue) > 0):
+            (absDeadEDF, prioEDF) = readyQueue[0][0]
+            print "***** SELECTED DE LA READYQUEUE:",readyQueue[0]
+            # DESCOMENTAR raw_input('***** Press enter to continue:')
 
-            while (len(readyQueue) > 0):
-                (absDeadEDF, prioEDF) = readyQueue[0][0]
-                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                print readyQueue[0]
-                print "--------------------------------------------------------------" 
-
-                for ncore in range(mCores):
-                    if (ncore >= 0):
-                        if(cpu[ncore].cpuIsIdle):
-                            # Insertar task tranquilament!
-                            ((absDeadEDF, prioEDF), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
-                            cpu[ncore].cpuAlloc(clock, cTaskId, prioEDF, period, relDead, absDead, wcet, texec, nActiv)
-                        else:
-                            # Vol dir que tenim una task a la CPU
-                            # Cal escollir entre la task de la CPU o la del HEAP
-                            (CPUid, CPUtaskId, CPUtaskPrio, CPUtaskPeriod, CPUtaskRelDead, CPUtaskAbsDead, CPUtaskWCET, CPUtaskTexec, CPUtaskNjob) = cpu[ncore].cpuInfo()
-                            if (absDeadEDF < CPUtaskAbsDead) or ((absDeadEDF == CPUtaskAbsDead) and (prioEDF < CPUtaskPrio)):
-                                # Expulsamos la tarea e introducimos la del HEAP
-                                ((absDeadEDF, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
-                                prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
-                                (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
-                                #if (pcTaskId != "Idle"):
-                                heappush(readyQueue, ((pabsDead, prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
-                            else:
-                                # No expulsamos la tarea
-                                break
+            for ncore in range(mCores):
+                if (ncore >= 0):
+                    if(cpu[ncore].cpuIsIdle):
+                        # Insertar task tranquilament!
+                        ((absDeadEDF, prioEDF), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                        print "INSERTA TAREA EN CPU: ((",absDeadEDF, prioEDF,"),(",cTaskId, period, relDead, absDead, wcet, texec, nActiv,"))" 
+                        cpu[ncore].cpuAlloc(clock, cTaskId, prioEDF, period, relDead, absDead, wcet, texec, nActiv)
                     else:
-                        print "No selecciona la cpu"
-                        break
+                        # Vol dir que tenim una task a la CPU
+                        # Cal escollir entre la task de la CPU o la del HEAP
+                        (CPUid, CPUtaskId, CPUtaskPrio, CPUtaskPeriod, CPUtaskRelDead, CPUtaskAbsDead, CPUtaskWCET, CPUtaskTexec, CPUtaskNjob) = cpu[ncore].cpuInfo()
+                        # Si deadline de tarea ready menor que deadline de tarea en CPU, la expulsa
+                        if (absDeadEDF < CPUtaskAbsDead) or ((absDeadEDF == CPUtaskAbsDead) and (prioEDF < CPUtaskPrio)):
+                            # Expulsamos la tarea e introducimos la del READYQUEUE
+                            ((absDeadEDF, prioEDF), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                            prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prioEDF, period, relDead, absDead, wcet, texec, nActiv)
+                            (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
+                            #if (pcTaskId != "Idle"):
+                            print "EXPULSA TAREA DE CPU: (",pabsDead,prio,") POR: (",absDeadEDF,prioEDF,")"
+                            heappush(readyQueue, ((pabsDead, prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
+                        else:
+                            print "LA TAREA DE LA CPU SE MANTIENE"
+                            # Fa break del for de cores
+                            break
+                else:
+                    print "NO SELECIONA CPU"
+                    break
                 
-        # Loof for next significant next event
+        # Look for next significant next event
         if (len(releaseQueue) > 0):
             nxtRelease = releaseQueue[0][0][0]
         else:
