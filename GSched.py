@@ -1,6 +1,7 @@
 ##Module: Utils
 import sys
 import os
+import heapq
 from heapq import heappush, heappop
 
 import Tasks
@@ -101,7 +102,7 @@ def fillRQueue(clock):
     nitems = len(releaseQueue)
     if ( nitems > 0):
         (releaseAt, prio) = releaseQueue[0][0]
-        while (clock  == releaseAt):
+        while (clock  <= releaseAt):
             (tid, period, relDead, absDead, wcet, texec, nActiv) = releaseQueue[0][1]
             t = heappop(releaseQueue)
 
@@ -160,20 +161,42 @@ def schedRun(ticks):
     #prepare data structures
     global tasks, cpu, readyQueue, releaseQueue
 
+    clock = 0
+    niter = 0
+    verbose = False
+
     cTaskId = []
     pTaskId = []
     
     hyper = initializeSched()
 
-    clock = 0
-    niter = 0
-    verbose = True
-    
     if (verbose): print "******** Clock: ", clock, "***************"
 
     while (True):
+
+        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" 
+        print "RealeaseQueue" 
+        for i in range(len(releaseQueue)):     
+            print releaseQueue[i]
+        print "ReadyQueue" 
+        for i in range(len(readyQueue)):     
+            print readyQueue[i]
+        raw_input('Press enter to continue: ')
+        print "--------------------------------------------------------------" 
+
         #add tasks in blocked to ready if release time
         updated = fillRQueue(clock)
+
+        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" 
+        print "RealeaseQueue" 
+        for i in range(len(releaseQueue)):     
+            print releaseQueue[i]
+        print "ReadyQueue" 
+        for i in range(len(readyQueue)):     
+            print readyQueue[i]
+        raw_input('Press enter to continue: ')
+        print "--------------------------------------------------------------" 
+
         
         if ((schedAlg == "RM") or (schedAlg == "DM")):
             while (len(readyQueue) > 0):
@@ -192,13 +215,16 @@ def schedRun(ticks):
 
             while (len(readyQueue) > 0):
                 (absDeadEDF, prioEDF) = readyQueue[0][0]
+                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
+                print readyQueue[0]
+                print "--------------------------------------------------------------" 
 
                 for ncore in range(mCores):
                     if (ncore >= 0):
                         if(cpu[ncore].cpuIsIdle):
                             # Insertar task tranquilament!
-                            ((absDeadEDF, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
-                            cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
+                            ((absDeadEDF, prioEDF), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                            cpu[ncore].cpuAlloc(clock, cTaskId, prioEDF, period, relDead, absDead, wcet, texec, nActiv)
                         else:
                             # Vol dir que tenim una task a la CPU
                             # Cal escollir entre la task de la CPU o la del HEAP
