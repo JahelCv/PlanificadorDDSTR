@@ -14,12 +14,22 @@ import chronogram
 import Cores
 import Tasks
 import GSched
+import LSched
+import Utils
+import BinPacking
 
 
 def usage ():
     print "Usage: \nprovaGSched-random [-help] [-verbose] [-seed value] [-cores value]"
     print "          [-cores value] [-util value] [-policy value]"
-    print " abreviated form: [h o: v s: c: u: p:]"   
+    print " abreviated form: [h o: v s: c: u: p:]"
+    print ""
+    print "--- IMPORTANT NOTE ---"
+    print ""   
+    print "    * If you want global policy, define only one policy value. ex. -p \"RM\" "
+    print "    * If you want local policy, define n policy values as cores values. "
+    print "      Splitted by \",\". ex. -c 4 -p \"RM,RM,EDF,DM\""
+    print ""
 
 def getOpts(argv):
     seed = None
@@ -27,10 +37,11 @@ def getOpts(argv):
     util = None
     output = None
     verbose = False
-    psched = "RM"
+    psched = ["RM"]
+    binpacking = "FF"
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:vs:c:u:p:", ["help", "output=", "seed=", "cores=", "util=", "policy:"])
+        opts, args = getopt.getopt(sys.argv[1:], "ho:vs:c:u:p:", ["help", "output=", "seed=", "cores=", "util=", "policy:", "binpacking:"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print str(err)  # will print something like "option -a not recognized"
@@ -51,11 +62,13 @@ def getOpts(argv):
         elif o in ("-u", "--util"):
             util = a
         elif o in ("-p", "--policy"):
-            psched = a
+            psched = a.split(",")
+        elif o in ("-b", "--binpacking"):
+            binpacking = a
         else:
             assert False, "unhandled option"
     # ...
-    return  (verbose, output, seed, cores, util, psched)
+    return  (verbose, output, seed, cores, util, psched, binpacking)
     
 #-------------------------#
 #          MAIN           #
@@ -65,9 +78,9 @@ def main (argv):
     globalUtil = 0.8
     mCores = 1
     semilla = random.randint(0, sys.maxint)
-    random.seed(semilla)
+    random.seed(semilla)                       
     
-    (verbose, fout, semilla, cores, util, sched) = getOpts(argv)
+    (verbose, fout, semilla, cores, util, sched, bp) = getOpts(argv)
     
     if (util != None):
         globalUtil = float(util)
@@ -75,11 +88,9 @@ def main (argv):
         random.seed(semilla)
     if (cores != None):
         mCores = int(cores)
-    if (sched != None):
-        psched = sched
 
     nTaskMin = 4
-    nTaskMax = 4
+    nTaskMax = 8
 
     ##System.generateSystem(mCores, nPartsMin, nPartsMax, globalUtil, nTaskMin, nTaskMax)
 
@@ -89,35 +100,98 @@ def main (argv):
     tlist = System.allTaskList()
     print "Lista de tareas", tlist
 
-    #wcrt = Analysis.WCRT(taskParamsList)
-    util = Analysis.utilization(tlist)
-    print "Utilizacion = ", util
+    if len(sched) == 1:
+        if (sched[0].strip() == ""):
+            return 
+        #wcrt = Analysis.WCRT(taskParamsList)
+        util = Analysis.utilization(tlist)
+        print "Utilizacion = ", util
 
-    wcrt = Analysis.schedulabilityTest(psched, 1, tlist)
-    print "Tiempo de respuesta: ", wcrt
+        wcrt = Analysis.schedulabilityTest(sched[0], 1, tlist)
+        print "Tiempo de respuesta: ", wcrt
+
+        GSched.schedInit(mCores, sched[0])
+
+        for tid in (Tasks.allTaskIds()):
+            GSched.scheAddTask(tid)
+
+        print "Tasks: "
+        GSched.showTasks()
+        GSched.schedRun(100)
+        
+        hyper = GSched.schedHyperperiod()
+        
+        chronogram.chronoInit(mCores, hyper, "chrono")
+        
+        for i in range(mCores):
+            chronogram.chronoAddLine(i, "C"+str(i))
+        
+        for c in range(mCores):
+            chrono = GSched.schedChrono(c)
+            for e in range(len(chrono)):
+                (tsk, start, end) = chrono[e]
+                chronogram.chronoAddExec(c, start, end, tsk)
+        chronogram.chronoClose()
+    else:
+        if len(sched) != mCores:
+            print ""
+            print "--- ERROR ---"
+            print ""
+            print " Different number of cores and policies"
+            print ""
+
+        lsched = []
+        for c in range(mCores):
+            lsched.append(())
+            lsched[c] = LSched("LCPU" + str(c))
+
+        #wcrt = Analysis.WCRT(taskParamsList)
+        #util = Analysis.utilization(tlist)
+        #print "Utilizacion = ", util
+
+        #wcrt = Analysis.schedulabilityTest(sched[0], 1, tlist)
+        #print "Tiempo de respuesta: ", wcrt
+
+        # Calcular hyperperiodo global
+        tperiods = []
+        for i in range(len(tasksIds)):
+            (tid, tper, tdead, twcet, tutil) = Tasks.taskGetParams(tasksIds[i])
+            tperiods.append(tper)
+
+        hyper = Utils.HyperPeriod(tperiods)
 
 
-    GSched.schedInit(mCores, psched)
+        # Bin packing
+        BinPacking.initBin(bp, mCores)
+        for (pid, util) in (tList):
+            ok = BinPacking.binAdd(pid, util)
+            if (not ok):
+                print "Fallo la particion no cabe", pid, util
+                break
 
-    for tid in (Tasks.allTaskIds()):
-        GSched.scheAddTask(tid)
+        #(Bins, Pesos) = BinPacking.binGetAll() # (Bins, Pesos)
+        for c in range(mCores): 
+            lsched[c].schedInit(mCores, sched[c])
+            # Cal afegir les tasques
+            (taskBinIds, taskpesos) = BinPacking.binGetbyIndex(c)
+            for btask in range(taskBinIds):
+                lsched[c].scheAddTask(btask)
+            print "Core ", c, " - Tasks: "
+            lsched[c].showTasks()
+            lsched[c].schedRun(hyper)
+        
+        chronogram.chronoInit(mCores, hyper, "chrono")
+        
+        for i in range(mCores):
+            chronogram.chronoAddLine(i, "C"+str(i))
+        
+        for c in range(mCores):
+            chrono = lsched[c].schedChrono(0)
+            for e in range(len(chrono)):
+                (tsk, start, end) = chrono[e]
+                chronogram.chronoAddExec(c, start, end, tsk)
+        chronogram.chronoClose()
 
-    print "Tasks: "
-    GSched.showTasks()
-    GSched.schedRun(100)
-    
-    hyper = GSched.schedHyperperiod()
-    
-    chronogram.chronoInit(mCores, hyper, "chrono")
-    
-    for i in range(mCores):
-        chronogram.chronoAddLine(i, "C"+str(i))
-    
-    for c in range(mCores):
-        chrono = GSched.schedChrono(c)
-        for e in range(len(chrono)):
-            (tsk, start, end) = chrono[e]
-            chronogram.chronoAddExec(c, start, end, tsk)
-    chronogram.chronoClose()
+
 
 main (sys.argv)

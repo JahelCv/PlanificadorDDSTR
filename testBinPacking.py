@@ -19,7 +19,7 @@ def getOpts(argv):
     util = None
     output = None
     verbose = False
-    psched = "RM"
+    psched = "FF"
     
     try:
         opts, args = getopt.getopt(sys.argv[1:], "ho:vs:c:u:p:", ["help", "output=", "seed=", "cores=", "util=", "policy:"])

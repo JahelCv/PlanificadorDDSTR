@@ -139,5 +139,6 @@ def chronoClose():
 # dwg.add(dwg.rect((xpos + 15, ypos), size=(10, heigth), fill=palette[idx]))
         xpos = xpos + offset + 20
 
+
 #    dwg.save()
     root.mainloop()
