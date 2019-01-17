@@ -14,7 +14,7 @@ import chronogram
 import Cores
 import Tasks
 import GSched
-import LSched
+from LSched import LSched
 import Utils
 import BinPacking
 
@@ -154,8 +154,8 @@ def main (argv):
 
         # Calcular hyperperiodo global
         tperiods = []
-        for i in range(len(tasksIds)):
-            (tid, tper, tdead, twcet, tutil) = Tasks.taskGetParams(tasksIds[i])
+        for i in range(len(tlist)):
+            (tid, tper, tdead, twcet, tutil) = tlist[i]
             tperiods.append(tper)
 
         hyper = Utils.HyperPeriod(tperiods)
@@ -163,10 +163,10 @@ def main (argv):
 
         # Bin packing
         BinPacking.initBin(bp, mCores)
-        for (pid, util) in (tList):
-            ok = BinPacking.binAdd(pid, util)
+        for (tid, tper, tdead, twcet, tutil) in (tlist):
+            ok = BinPacking.binAdd(tid, tutil)
             if (not ok):
-                print "Fallo la particion no cabe", pid, util
+                print "Fallo la particion no cabe", tid, tutil
                 break
 
         #(Bins, Pesos) = BinPacking.binGetAll() # (Bins, Pesos)
@@ -174,8 +174,8 @@ def main (argv):
             lsched[c].schedInit(mCores, sched[c])
             # Cal afegir les tasques
             (taskBinIds, taskpesos) = BinPacking.binGetbyIndex(c)
-            for btask in range(taskBinIds):
-                lsched[c].scheAddTask(btask)
+            for i in range(len(taskBinIds)):
+                lsched[c].scheAddTask(taskBinIds[i])
             print "Core ", c, " - Tasks: "
             lsched[c].showTasks()
             lsched[c].schedRun(hyper)
