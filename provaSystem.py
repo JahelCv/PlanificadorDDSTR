@@ -79,7 +79,7 @@ def main (argv):
         psched = sched
 
     nTaskMin = 4
-    nTaskMax = 8
+    nTaskMax = 4
 
     ##System.generateSystem(mCores, nPartsMin, nPartsMax, globalUtil, nTaskMin, nTaskMax)
 

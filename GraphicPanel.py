@@ -80,7 +80,7 @@ def chronoInit(nlines, width, fname):
 
         dwg.create_line(offset + xpos, offset, offset + xpos, offset + ymax, fill="grey")
         dwg.create_line(offset + xpos + inc/2, offset, offset + xpos + inc/2, offset + ymax, fill="gray")
-        dwg.create_text(offset + xpos-3, 6+offset + ymax, text=str(xpos), fill="black", font=("Helvetica", 6))
+        dwg.create_text(offset + xpos-3, 6+offset + ymax, text=str(xpos/2), fill="black", font=("Helvetica", 6))
         
         xpos += inc
     

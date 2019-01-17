@@ -155,6 +155,22 @@ def selectCPU(p):
         return lcpu[-1][1]
     else:                    #no available cpu for prio p
         return -1
+
+def selectCPUEDF(absDeadEDF, prioEDF):
+    global cpu
+    selectedCPU = -1
+    absDeadMax = absDeadEDF
+    prioEDFMax = prioEDF
+    for ncore in range(mCores):
+        (CPUid, CPUtaskId, CPUtaskPrio, CPUtaskPeriod, CPUtaskRelDead, CPUtaskAbsDead, CPUtaskWCET, CPUtaskTexec, CPUtaskNjob) = cpu[ncore].cpuInfo()
+        if (CPUtaskId == "Idle"):
+            selectedCPU = ncore
+            break
+        elif (absDeadMax < CPUtaskAbsDead) or ((absDeadMax == CPUtaskAbsDead) and (prioEDFMax < CPUtaskPrio)):
+            absDeadMax = CPUtaskAbsDead
+            prioEDFMax = CPUtaskPrio
+            selectedCPU = ncore
+    return selectedCPU;
     
 def schedHyperperiod():
 	return hyper
@@ -203,6 +219,18 @@ def schedRun(ticks):
                     break
 
         elif (schedAlg == "EDF"):
+            while (len(readyQueue) > 0):
+                (absDead, prio) = readyQueue[0][0]
+                ncore = selectCPUEDF(absDead, prio)
+                if (ncore >= 0):
+                    ((absDead, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
+                    prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
+                    (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
+                    if (pcTaskId != "Idle"):
+                        heappush(readyQueue, ((absDead, prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
+                else:
+                    break
+            """
             # print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
             # Quito porque ES EXPULSIVO y se comprueba a cada clock -> while (len(readyQueue) > 0):
             (absDeadEDF, prioEDF) = readyQueue[0][0]
@@ -211,6 +239,8 @@ def schedRun(ticks):
 
             for ncore in range(mCores):
                 if (ncore >= 0):
+                    if(cpu[ncore].cpuIsIdle):
+                        print "CPU STATE: ", cpu[ncore].cpuIsIdle
                     if(cpu[ncore].cpuIsIdle):
                         # Insertar task tranquilament!
                         ((absDeadEDF, prioEDF), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
@@ -236,7 +266,7 @@ def schedRun(ticks):
                 else:
                     print "NO SELECIONA CPU"
                     break
-                
+                """
         # Look for next significant next event
         if (len(releaseQueue) > 0):
             nxtRelease = releaseQueue[0][0][0]
