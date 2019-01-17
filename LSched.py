@@ -53,16 +53,16 @@ class LSched:
     		nTaskActiv[tid] = 1
 
     def showTasks(self):
-        return tasksIds
+        return self.tasksIds
 
     def initializeSched(self):        
         tperiods = []
         tList = []
         utotal = 0.0
         for i in range(len(self.tasksIds)):
-            (tid, tper, tdead, twcet, tutil) = Tasks.taskGetParams(self.tasksIds[i])
+            (tid, tper, tdead, twcet, tutil) = Tasks.taskGetParams(self.tasksIds[i][0])
             utotal +=  float(twcet) / float(tper)
-            elem = (self.TasksIds[i], tper, tdead, twcet)
+            elem = (self.tasksIds[i][0], tper, tdead, twcet)
             tList.append(elem)
             tperiods.append(tper)
         
@@ -85,9 +85,9 @@ class LSched:
                 absDead = releaseAt + relDead
                 nActiv += 1
         #print releaseQueue
-        for i in range(mCores):
+        for i in range(self.mCores):
             self.cpu.append(())
-            self.cpu[i] = CPU("CPU"+str(i))
+            self.cpu[i] = CPU("CPU"+self.id)
             pstate = self.cpu[i].cpuIdle(0)
         return self.hyper
 
@@ -126,7 +126,7 @@ class LSched:
     def selectIdleCPU(self):
         # global cpu
         lcpu = []
-        for i in range(mCores):
+        for i in range(self.mCores):
             value = (self.cpu[i].cpuPrio(), i)
             lcpu.append(value)
         lcpu.sort()
@@ -141,7 +141,7 @@ class LSched:
     def selectCPU(self, p):
         # global cpu
         lcpu = []
-        for i in range(mCores):
+        for i in range(self.mCores):
             value = (self.cpu[i].cpuPrio(), i)
             lcpu.append(value)
         lcpu.sort()
@@ -157,7 +157,7 @@ class LSched:
         selectedCPU = -1
         absDeadMax = absDeadEDF
         prioEDFMax = prioEDF
-        for ncore in range(mCores):
+        for ncore in range(self.mCores):
             (CPUid, CPUtaskId, CPUtaskPrio, CPUtaskPeriod, CPUtaskRelDead, CPUtaskAbsDead, CPUtaskWCET, CPUtaskTexec, CPUtaskNjob) = self.cpu[ncore].cpuInfo()
             if (CPUtaskId == "Idle"):
                 selectedCPU = ncore
@@ -173,7 +173,7 @@ class LSched:
 
     def showCPUS(self):
         # global cpu
-        for i in range(mCores):
+        for i in range(self.mCores):
             self.cpu[i].cpuInfo()
             
     def schedRun(self, ticks):
@@ -187,13 +187,13 @@ class LSched:
         cTaskId = []
         pTaskId = []
         
-        self.hyper = initializeSched()
+        self.hyper = self.initializeSched()
 
         if (verbose): print "******** Clock: ", clock, "***************"
 
         while (True):
             # add tasks in blocked to ready if release time
-            updated = fillRQueue(clock)
+            updated = self.fillRQueue(clock)
             
             print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
             for i in range(len(self.readyQueue)):     
@@ -203,8 +203,8 @@ class LSched:
             
             if ((self.schedAlg == "RM") or (self.schedAlg == "DM")):
                 while (len(self.readyQueue) > 0):
-                    prio = readyQueue[0][0]
-                    ncore = selectCPU(prio)
+                    prio = self.readyQueue[0][0]
+                    ncore = self.selectCPU(prio)
                     if (ncore >= 0):
                         ((prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(self.readyQueue) 
                         prevState = self.cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
@@ -217,7 +217,7 @@ class LSched:
             elif (self.schedAlg == "EDF"):
                 while (len(self.readyQueue) > 0):
                     (absDead, prio) = self.readyQueue[0][0]
-                    ncore = selectCPUEDF(absDead, prio)
+                    ncore = self.selectCPUEDF(absDead, prio)
                     if (ncore >= 0):
                         ((absDead, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(self.readyQueue) 
                         prevState = self.cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
@@ -235,23 +235,23 @@ class LSched:
             strrem = "nxtRelease: ", nxtRelease
             nxtEvent = nxtRelease - clock
             
-            for i in range(mCores):
+            for i in range(self.mCores):
                 rem = self.cpu[i].cpuRemainTicks()
                 strrem +=  "   ["+str(i)+ "] rem: ",  rem, ", "
                 if (rem < nxtEvent):
                    nxtEvent = rem
             if (nxtEvent > self.hyper):
                 nxtEvent = self.hyper - clock
-            if (verbose): showCPUS()
+            if (verbose): self.showCPUS()
             clock = clock + nxtEvent
             if (verbose): print "******** Clock: ", clock, "***************", nxtEvent
             
-            for i in range(mCores):
+            for i in range(self.mCores):
                 rem = self.cpu[i].cpuRunTicks(nxtEvent)
                 if (rem == 0):
                     self.cpu[i].cpuIdle(clock)
 
-            if (verbose): showCPUS()    
+            if (verbose): self.showCPUS()    
             if (verbose): print "-------------------------"    
             niter += 1
             #until 
@@ -263,7 +263,7 @@ class LSched:
         #for i in range(mCores):
         #    cpu[i].cpuInfo()
         ans = ""
-        for i in range(mCores):
+        for i in range(self.mCores):
             ans += self.cpu[i].cpuShow()
         return ans
 

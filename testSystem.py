@@ -9,9 +9,9 @@ import System
 import Analysis
 
 def usage ():
-    print "Usage: \nprovaGSched-random [-help] [-verbose] [-seed value] [-cores value]"
-    print "          [-cores value] [-util value] [-policy value]"
-    print " abreviated form: [h o: v s: c: u: p:]"   
+    print("Usage: \nprovaGSched-random [-help] [-verbose] [-seed value] [-cores value]")
+    print("          [-cores value] [-util value] [-policy value]")
+    print(" abreviated form: [h o: v s: c: u: p:]")
 
 def getOpts(argv):
     seed = None
@@ -55,7 +55,7 @@ def getOpts(argv):
 def main (argv):
 
     globalUtil = 0.8
-    mCores = 1
+    mCores = 1 # Modificado, era 1
     semilla = random.randint(0, sys.maxint)
     random.seed(semilla)
     
@@ -85,7 +85,7 @@ def main (argv):
     util = Analysis.utilization(tlist)
     print "Utilizacion = ", util
 
-    wcrt = Analysis.schedulabilityTest(psched, 1, tlist)
+    wcrt = Analysis.schedulabilityTest(psched, mCores, tlist)
     print "Tiempo de respuesta: ", wcrt
         
 main (sys.argv)

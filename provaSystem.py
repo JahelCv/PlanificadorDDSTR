@@ -20,15 +20,17 @@ import BinPacking
 
 
 def usage ():
-    print "Usage: \nprovaGSched-random [-help] [-verbose] [-seed value] [-cores value]"
-    print "          [-cores value] [-util value] [-policy value]"
-    print " abreviated form: [h o: v s: c: u: p:]"
+    print "Usage: \nprovaSystem [-help] [-verbose] [-seed value] [-cores value]"
+    print "          [-cores value] [-util value] [-policy value] [-binpacking value]"
+    print " abreviated form: [h o: v s: c: u: p: b:]"
     print ""
     print "--- IMPORTANT NOTE ---"
     print ""   
-    print "    * If you want global policy, define only one policy value. ex. -p \"RM\" "
-    print "    * If you want local policy, define n policy values as cores values. "
-    print "      Splitted by \",\". ex. -c 4 -p \"RM,RM,EDF,DM\""
+    print "    * If you want global policy, define a single policy value. "
+    print "      For example: -p \"RM\" "
+    print "    * If you want local policy, define n policy values as cores values "
+    print "      splitted by \",\". For example: -c 4 -p \"RM,RM,EDF,DM\""
+    print "    * The option -binpacking is only available for local multicore policy."
     print ""
 
 def getOpts(argv):
@@ -41,7 +43,7 @@ def getOpts(argv):
     binpacking = "FF"
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:vs:c:u:p:", ["help", "output=", "seed=", "cores=", "util=", "policy:", "binpacking:"])
+        opts, args = getopt.getopt(sys.argv[1:], "ho:vs:c:u:p:b:", ["help", "output=", "seed=", "cores=", "util=", "policy:", "binpacking:"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print str(err)  # will print something like "option -a not recognized"
@@ -71,7 +73,7 @@ def getOpts(argv):
     return  (verbose, output, seed, cores, util, psched, binpacking)
     
 #-------------------------#
-#          MAIN           #
+#          MAIN            #
 #-------------------------#
 def main (argv):
 
@@ -100,9 +102,12 @@ def main (argv):
     tlist = System.allTaskList()
     print "Lista de tareas", tlist
 
+    # Si la planificacion es GLOBAL
     if len(sched) == 1:
+        #Si solo hay un elemento de planificacion por error (es un espacio)
         if (sched[0].strip() == ""):
             return 
+
         #wcrt = Analysis.WCRT(taskParamsList)
         util = Analysis.utilization(tlist)
         print "Utilizacion = ", util
@@ -132,18 +137,26 @@ def main (argv):
                 (tsk, start, end) = chrono[e]
                 chronogram.chronoAddExec(c, start, end, tsk)
         chronogram.chronoClose()
+
+    # *********************************************
+    # **** Si planificacion LOCAL MULTICORE *******
+    # *********************************************
     else:
+
+        # Si las planificaciones no coinciden con numero de cores, SALIR
         if len(sched) != mCores:
             print ""
-            print "--- ERROR ---"
+            print " ###### ERROR ######"
             print ""
-            print " Different number of cores and policies"
+            print " Different number of cores and policies!"
             print ""
+            return 
 
         lsched = []
         for c in range(mCores):
             lsched.append(())
             lsched[c] = LSched("LCPU" + str(c))
+            print c,": Objeto LSched: ", lsched[c].getId()
 
         #wcrt = Analysis.WCRT(taskParamsList)
         #util = Analysis.utilization(tlist)
@@ -159,6 +172,7 @@ def main (argv):
             tperiods.append(tper)
 
         hyper = Utils.HyperPeriod(tperiods)
+        print "El hiperperiodo es:", hyper
 
 
         # Bin packing
@@ -168,16 +182,21 @@ def main (argv):
             if (not ok):
                 print "Fallo la particion no cabe", tid, tutil
                 break
+        print ""
+        print " ##### Resultado de BinPacking #####"
+        BinPacking.show()
 
-        #(Bins, Pesos) = BinPacking.binGetAll() # (Bins, Pesos)
+        # (Bins, Pesos) = BinPacking.binGetAll() # (Bins, Pesos)
         for c in range(mCores): 
-            lsched[c].schedInit(mCores, sched[c])
+            # Se pone mCores = 1 porque cada planificador planifica a 1 CPU
+            lsched[c].schedInit(1, sched[c])
             # Cal afegir les tasques
             (taskBinIds, taskpesos) = BinPacking.binGetbyIndex(c)
             for i in range(len(taskBinIds)):
-                lsched[c].scheAddTask(taskBinIds[i])
-            print "Core ", c, " - Tasks: "
-            lsched[c].showTasks()
+                lsched[c].scheAddTask(Tasks.taskGetParams(taskBinIds[i]))
+            '''print "Core ", c, " - Tasks: "
+            print lsched[c].showTasks()
+            print " #######"'''
             lsched[c].schedRun(hyper)
         
         chronogram.chronoInit(mCores, hyper, "chrono")
