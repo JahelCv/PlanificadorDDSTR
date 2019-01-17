@@ -55,7 +55,7 @@ class LSched:
     def showTasks(self):
         return self.tasksIds
 
-    def initializeSched(self):        
+    def initializeSched(self,hyper):        
         tperiods = []
         tList = []
         utotal = 0.0
@@ -66,7 +66,7 @@ class LSched:
             tList.append(elem)
             tperiods.append(tper)
         
-        self.hyper = Utils.HyperPeriod(tperiods)
+        self.hyper = hyper
         
         if ((self.schedAlg == "RM") or (self.schedAlg == "DM") or (self.schedAlg == "EDF")):
             tList = sorted(tList, key=lambda elm: elm[2])
@@ -187,9 +187,11 @@ class LSched:
         cTaskId = []
         pTaskId = []
         
-        self.hyper = self.initializeSched()
+        self.hyper = self.initializeSched(ticks)
 
-        if (verbose): print "******** Clock: ", clock, "***************"
+        if (verbose): 
+            print "-------------------------"
+            print "******** Clock: ", clock, "***************"
 
         while (True):
             # add tasks in blocked to ready if release time
@@ -244,7 +246,9 @@ class LSched:
                 nxtEvent = self.hyper - clock
             if (verbose): self.showCPUS()
             clock = clock + nxtEvent
-            if (verbose): print "******** Clock: ", clock, "***************", nxtEvent
+            if (verbose): 
+                print "-------------------------"
+                print "******** Clock: ", clock, "***************", nxtEvent
             
             for i in range(self.mCores):
                 rem = self.cpu[i].cpuRunTicks(nxtEvent)

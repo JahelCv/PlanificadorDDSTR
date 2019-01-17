@@ -92,7 +92,7 @@ def main (argv):
         mCores = int(cores)
 
     nTaskMin = 4
-    nTaskMax = 8
+    nTaskMax = 10
 
     ##System.generateSystem(mCores, nPartsMin, nPartsMax, globalUtil, nTaskMin, nTaskMax)
 
