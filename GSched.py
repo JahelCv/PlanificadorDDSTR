@@ -227,7 +227,7 @@ def schedRun(ticks):
                     prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
                     (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
                     if (pcTaskId != "Idle"):
-                        heappush(readyQueue, ((absDead, prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
+                        heappush(readyQueue, ((pabsDead, prio), (pcTaskId, pper, prDead, pabsDead, pwcet, ptexec, pnActiv)))
                 else:
                     break
             """
