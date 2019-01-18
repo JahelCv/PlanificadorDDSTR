@@ -186,7 +186,8 @@ def schedRun(ticks):
 
     clock = 0
     niter = 0
-    verbose = True
+    verbose = False
+    cambioscontexto = 0
 
     cTaskId = []
     pTaskId = []
@@ -199,17 +200,17 @@ def schedRun(ticks):
         # add tasks in blocked to ready if release time
         updated = fillRQueue(clock)
         
-        print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
-        for i in range(len(readyQueue)):     
-            print readyQueue[i]
-        # DESCOMENTAR raw_input('#### Press enter to continue: ####')
-        # print "--------------------------------------------------------------"  
+        if (verbose):
+            print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
+            for i in range(len(readyQueue)):     
+                print readyQueue[i]
         
         if ((schedAlg == "RM") or (schedAlg == "DM")):
             while (len(readyQueue) > 0):
                 prio = readyQueue[0][0]
                 ncore = selectCPU(prio)
                 if (ncore >= 0):
+                    cambioscontexto += 1
                     ((prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
                     prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
                     (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
@@ -223,6 +224,7 @@ def schedRun(ticks):
                 (absDead, prio) = readyQueue[0][0]
                 ncore = selectCPUEDF(absDead, prio)
                 if (ncore >= 0):
+                    cambioscontexto += 1
                     ((absDead, prio), (cTaskId, period, relDead, absDead, wcet, texec, nActiv)) = heappop(readyQueue) 
                     prevState = cpu[ncore].cpuAlloc(clock, cTaskId, prio, period, relDead, absDead, wcet, texec, nActiv)
                     (prio, pcTaskId, (pper, prDead, pwcet), (pabsDead, ptexec, pnActiv)) = prevState
@@ -262,7 +264,11 @@ def schedRun(ticks):
         if (clock >= hyper):
         	break
         
-    print "Hyperperiodo = ", hyper, " Clock: ", clock, "No Iter: ", niter, "Policy: ", schedAlg
+    print ""
+    print " ## Hyperperiodo = ", hyper, " Clock: ", clock, "No Iter: ", niter, "Policy: ", schedAlg
+    print ""
+    print " ## Cambios de contexto = ", cambioscontexto
+    print ""
     cpu[i].cpuAlloc(clock,  "Idle", 0, 0, 0,0, 0, 0, 0)
     #for i in range(mCores):
     #    cpu[i].cpuInfo()

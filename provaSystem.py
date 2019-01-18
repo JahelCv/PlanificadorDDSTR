@@ -100,7 +100,8 @@ def main (argv):
     #System.showSystem()
 
     tlist = System.allTaskList()
-    print "Lista de tareas", tlist
+    print ""
+    print " ## Lista de tareas", tlist
 
     # Si la planificacion es GLOBAL
     if len(sched) == 1:
@@ -110,18 +111,21 @@ def main (argv):
 
         #wcrt = Analysis.WCRT(taskParamsList)
         util = Analysis.utilization(tlist)
-        print "Utilizacion = ", util
+        print ""
+        print " ## Utilizacion = ", util
 
+        print ""
         wcrt = Analysis.schedulabilityTest(sched[0], 1, tlist)
-        print "Tiempo de respuesta: ", wcrt
+        print ""
+        print " ## Tiempo de respuesta: ", wcrt
 
         GSched.schedInit(mCores, sched[0])
 
         for tid in (Tasks.allTaskIds()):
             GSched.scheAddTask(tid)
 
-        print "Tasks: "
-        GSched.showTasks()
+        # print "Tasks: "
+        # GSched.showTasks()
         GSched.schedRun(100)
         
         hyper = GSched.schedHyperperiod()
@@ -158,9 +162,10 @@ def main (argv):
             lsched[c] = LSched("LCPU" + str(c))
             print c,": Objeto LSched: ", lsched[c].getId()
 
-        #wcrt = Analysis.WCRT(taskParamsList)
-        #util = Analysis.utilization(tlist)
-        #print "Utilizacion = ", util
+        # wcrt = Analysis.WCRT(taskParamsList)
+        util = Analysis.utilization(tlist)
+        print ""
+        print "Utilizacion = ", util
 
         #wcrt = Analysis.schedulabilityTest(sched[0], 1, tlist)
         #print "Tiempo de respuesta: ", wcrt
@@ -183,10 +188,9 @@ def main (argv):
                 print "Fallo la particion no cabe", tid, tutil
                 break
         print ""
-        print " ##### Resultado de BinPacking #####"
+        print " ##### Resultado de BinPacking:",bp," #####"
         BinPacking.show()
 
-        # (Bins, Pesos) = BinPacking.binGetAll() # (Bins, Pesos)
         for c in range(mCores): 
             # Se pone mCores = 1 porque cada planificador planifica a 1 CPU
             lsched[c].schedInit(1, sched[c])
@@ -194,9 +198,8 @@ def main (argv):
             (taskBinIds, taskpesos) = BinPacking.binGetbyIndex(c)
             for i in range(len(taskBinIds)):
                 lsched[c].scheAddTask(Tasks.taskGetParams(taskBinIds[i]))
-            '''print "Core ", c, " - Tasks: "
-            print lsched[c].showTasks()
-            print " #######"'''
+            wcrt = Analysis.schedulabilityTest(sched[c], 1, lsched[c].getTasksIds())
+            print "Tiempo de respuesta en CPU ",c,":", wcrt
             lsched[c].schedRun(hyper)
         
         chronogram.chronoInit(mCores, hyper, "chrono")

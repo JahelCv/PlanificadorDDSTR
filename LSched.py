@@ -30,6 +30,8 @@ class LSched:
     def getId(self):
         return self.id
 
+    def getTasksIds(self):
+        return self.tasksIds
             
     def schedInit(self, ncores, policy):
         self.clock = 0
@@ -182,7 +184,7 @@ class LSched:
 
         clock = 0
         niter = 0
-        verbose = True
+        verbose = False
 
         cTaskId = []
         pTaskId = []
@@ -197,11 +199,12 @@ class LSched:
             # add tasks in blocked to ready if release time
             updated = self.fillRQueue(clock)
             
-            print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
-            for i in range(len(self.readyQueue)):     
-                print self.readyQueue[i]
-            # DESCOMENTAR raw_input('#### Press enter to continue: ####')
-            # print "--------------------------------------------------------------"  
+            if (verbose):
+                print "#### Despres de fillRQueue(clock), la readyQueue lleva: ####"
+                for i in range(len(self.readyQueue)):     
+                    print self.readyQueue[i]
+                # DESCOMENTAR raw_input('#### Press enter to continue: ####')
+                # print "--------------------------------------------------------------"  
             
             if ((self.schedAlg == "RM") or (self.schedAlg == "DM")):
                 while (len(self.readyQueue) > 0):
